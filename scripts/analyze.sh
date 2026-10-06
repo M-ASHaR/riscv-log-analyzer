@@ -1,26 +1,79 @@
 #!/bin/bash
 set -euo pipefail
 
+# for arg in "$@"; do
+#     if [[ "$arg" == "--format" ]]; then
+#         echo "Format option found"
+#     fi
+# done
+
+
+#for --help
+if [[ ${1:-} == "--help" ]]; then 
+	echo "--- RISC-V Simulation Log Analyzer ---"
+	echo
+	echo "Usage:"
+	echo
+  	echo "./scripts/analyze.sh <log_file> [options]"
+	echo "Options:"
+	echo "--format [text|csv]   Output format"
+  	echo "--output <path>       Write output to a file"
+  	echo "--verbose             Show detailed information"
+  	echo "--help                Show this help message"
+	exit 0
+fi
+
+format="text"
+output=""
+verbose=false
+log_file=""
+while [[ $# -gt 0 ]]; do
+
+    if [[ "$1" == "--format" ]]; then
+        format="$2"
+        shift 2
+
+    elif [[ "$1" == "--output" ]]; then
+        output="$2"
+        shift 2
+
+    elif [[ "$1" == "--verbose" ]]; then
+        verbose=true
+        shift
+
+    else
+        log_file="$1"
+        shift
+    fi
+
+done
+#checking parser working
+# echo "Log file: $log_file"
+# echo "Format: $format"
+# echo "Output: $output"
+# echo "Verbose: $verbose"
+
 #checking if log file is provided or not
-if [[ $# -eq 0 ]]; then
+if [[ -z "$log_file" ]]; then
 	echo "Error: No log file provided."
-	exit 11
+	exit 1
 fi
 
 #checking if provided log file exists or not
 check_file(){
-	if [[ ! -f "$1" ]]; then
-		echo "Error: File not Found: $1"
+	if [[ ! -f "$log_file" ]]; then
+		echo "Error: File not Found: $log_file"
 		exit 1
 	fi
 }
 
-check_file "$1"
+check_file "$log_file"
 
 #counting the test results and rates of pass, fail and skip
-passed=$(grep -c "TEST PASS" "$1" || true)
-failed=$(grep -c "TEST FAIL" "$1" || true)
-skipped=$(grep -c "TEST SKIP" "$1" || true)
+#grep is returning 1 when no match is found so || true is preventing set -e from stoping the execution
+passed=$(grep -c "TEST PASS" "$log_file" || true)
+failed=$(grep -c "TEST FAIL" "$log_file" || true)
+skipped=$(grep -c "TEST SKIP" "$log_file" || true)
 
 total=$((passed + failed + skipped))
 
@@ -28,41 +81,11 @@ pass_rate=$(awk "BEGIN {printf \"%.1f\", ($passed / $total) * 100"})
 fail_rate=$(awk "BEGIN {printf \"%.1f\", ($failed / $total) * 100}")
 skip_rate=$(awk "BEGIN {printf \"%.1f\", ($skipped / $total) * 100}")
 
-failed_tests=$(grep "TEST FAIL" "$1" | awk '{print $5}' || true)
-
-echo "=== RISC-V Simulation Log Analysis ==="
-echo
-echo "Log file: $1"
-echo
-echo "--- Results Summary ---"
-echo
-
-echo "Total tests: $total"
-echo
-echo "Passed: $passed (${pass_rate}%)"
-echo "Failed: $failed (${fail_rate}%)"
-echo "Skipped: $skipped (${skip_rate}%)"
-
-echo
-echo "--- Failed Tests ---"
-echo
-
-#echo "Pass Rate: ${pass_rate}%"
-#echo "Failed Tests: "
-echo "$failed_tests"
-
+failed_tests=$(grep "TEST FAIL" "$log_file" | awk '{print $5}' || true)
 #extracting test names and execution times
-timings=$(grep "TEST PASS\|TEST FAIL" "$1" | awk '{print $5, $6}' | tr -d '()' | sed 's/s$//')
+timings=$(grep "TEST PASS\|TEST FAIL" "$log_file" | awk '{print $5, $6}' | tr -d '()' | sed 's/s$//')
 #echo "$timings"
 formatted_timings=$(echo "$timings" | awk '{print $1 ": " $2 "s"}')
-
-echo
-echo "--- Execution Times ---"
-echo
-
-#echo "Execution Times:"
-echo "$formatted_timings"
-
 timing_stats=$(echo "$timings" | awk '
 BEGIN {
     min = 999999
@@ -88,17 +111,118 @@ printf "Max time: %.2fs (%s)\n", max, max_test
 printf "Avg time: %.2fs\n", sum / count
 }')
 
-echo
-echo "--- Timing Statistics ---"
-echo
 
+if [[ "$format" == "text" ]]; then
 
-echo "$timing_stats"
+    echo "=== RISC-V Simulation Log Analysis ==="
+    echo
+    echo "Log file: $log_file"
+    echo
+    echo "--- Results Summary ---"
+    echo
 
+    echo "Total tests: $total"
+    echo
+    echo "Passed: $passed (${pass_rate}%)"
+    echo "Failed: $failed (${fail_rate}%)"
+    echo "Skipped: $skipped (${skip_rate}%)"
+
+    echo
+    echo "--- Failed Tests ---"
+    echo
+
+    echo "$failed_tests"
+
+    echo
+    echo "--- Execution Times ---"
+    echo
+
+    echo "$formatted_timings"
+
+    echo
+    echo "--- Timing Statistics ---"
+    echo
+
+    echo "$timing_stats"
+
+    echo
+
+    if [[ $failed -eq 0 ]]; then
+        echo "--- Verdict: PASS ---"
+    else
+        echo "--- Verdict: FAIL ---"
+    fi
+
+elif [[ "$format" == "csv" ]]; then
+
+    echo "Test Results"
+    echo "Test Name,Status,Execution Time"
+
+    grep "TEST PASS\|TEST FAIL\|TEST SKIP" "$log_file" | awk '
+    {
+        test_name = $5
+        status = $4
+        time = $6
+
+        gsub(/[():]/, "", status)
+        gsub(/[()]/, "", time)
+
+        if (status == "SKIP") {
+            time = "N/A"
+        } else {
+            sub(/s$/, "", time)
+            time = time "s"
+        }
+
+        print test_name "," status "," time
+    }'
+
+    echo
+    echo "Summary"
+    echo "Metric,Value"
+    echo "Total Tests,$total"
+    echo "Passed,$passed"
+    echo "Failed,$failed"
+    echo "Skipped,$skipped"
+    echo "Pass Rate,${pass_rate}%"
+    echo "Fail Rate,${fail_rate}%"
+    echo "Skip Rate,${skip_rate}%"
+
+    echo
+    echo "Timing Statistics"
+    echo "Metric,Value"
+
+    echo "$timing_stats" | awk '
+    /Min time/ {
+        gsub(/[()]/, "", $4)
+        print "Minimum Time," $3
+        print "Minimum Time Test," $4
+    }
+    /Max time/ {
+        gsub(/[()]/, "", $4)
+        print "Maximum Time," $3
+        print "Maximum Time Test," $4
+    }
+    /Avg time/ {
+        print "Average Time," $3
+    }'
+
+    echo
+    if [[ $failed -eq 0 ]]; then
+        echo "Verdict,PASS"
+    else
+        echo "Verdict,FAIL"
+    fi
+
+else
+    echo "Error: Invalid format: $format"
+    echo "Valid formats are: text, csv"
+    exit 1
+fi
+
+# Set exit status based on test results
 if [[ $failed -eq 0 ]]; then
-	echo "--- Verdict PASS ---"
-	exit 0
-else 
-	echo "--- Verdict FAIL ---"	
-	exit 1
+    exit 0
+else
+    exit 1
 fi
