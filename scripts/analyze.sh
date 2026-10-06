@@ -66,8 +66,18 @@ check_file(){
 		exit 1
 	fi
 }
+write_output(){
+	# If an output path is provided, redirect all script output to that file
+    if [[ -n "$output" ]]; then
+		# Make sure the output directory exists before creating the file
+        mkdir -p "$(dirname "$output")"
+		# Redirect standard output so all following echo commands go to the file
+        exec > "$output"
+    fi
+}
 
 check_file "$log_file"
+write_output
 
 #counting the test results and rates of pass, fail and skip
 #grep is returning 1 when no match is found so || true is preventing set -e from stoping the execution
