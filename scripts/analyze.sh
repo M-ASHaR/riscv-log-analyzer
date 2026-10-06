@@ -7,19 +7,37 @@ set -euo pipefail
 #     fi
 # done
 
+show_help(){
+    echo "--- RISC-V Simulation Log Analyzer ---"
+    echo
+    echo "Usage:"
+    echo
+    echo "./scripts/analyze.sh <log_file> [options]"
+    echo "Options:"
+    echo "--format [text|csv]   Output format"
+    echo "--output <path>       Write output to a file"
+    echo "--verbose             Show detailed information"
+    echo "--help                Show this help message"
+}
+
+show_help_hint(){
+    echo
+    echo "Use './scripts/analyze.sh --help' for usage information."
+}
 
 #for --help
 if [[ ${1:-} == "--help" ]]; then 
-	echo "--- RISC-V Simulation Log Analyzer ---"
-	echo
-	echo "Usage:"
-	echo
-  	echo "./scripts/analyze.sh <log_file> [options]"
-	echo "Options:"
-	echo "--format [text|csv]   Output format"
-  	echo "--output <path>       Write output to a file"
-  	echo "--verbose             Show detailed information"
-  	echo "--help                Show this help message"
+	# echo "--- RISC-V Simulation Log Analyzer ---"
+	# echo
+	# echo "Usage:"
+	# echo
+  	# echo "./scripts/analyze.sh <log_file> [options]"
+	# echo "Options:"
+	# echo "--format [text|csv]   Output format"
+  	# echo "--output <path>       Write output to a file"
+  	# echo "--verbose             Show detailed information"
+  	# echo "--help                Show this help message"
+	show_help
 	exit 0
 fi
 
@@ -30,20 +48,48 @@ log_file=""
 while [[ $# -gt 0 ]]; do
 
     if [[ "$1" == "--format" ]]; then
-        format="$2"
-        shift 2
+		#check that -- format must have a value
+        if [[ $# -lt 2 ]]; then
+        echo "Error: --format requires a value."
+        echo "Valid formats are: text, csv"
+        exit 1
+    fi
+
+    format="$2"
+    shift 2
 
     elif [[ "$1" == "--output" ]]; then
-        output="$2"
-        shift 2
+		#checking that output must have a destination value
+        if [[ $# -lt 2 ]]; then
+        echo "Error: --output requires a file path."
+        exit 1
+    fi
+
+    output="$2"
+    shift 2
 
     elif [[ "$1" == "--verbose" ]]; then
         verbose=true
         shift
 
     else
-        log_file="$1"
-        shift
+        # Reject unknown options
+    if [[ "$1" == --* ]]; then
+        echo "Error: Unknown option: $1"
+		show_help_hint
+        exit 1
+    fi
+
+	# Only one log file is allowed
+    if [[ -n "$log_file" ]]; then
+        echo "Error: Multiple log files provided."
+        echo "Please provide only one log file."
+		show_help_hint
+        exit 1
+    fi
+
+    log_file="$1"
+    shift
     fi
 
 done
