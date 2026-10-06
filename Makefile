@@ -1,11 +1,5 @@
 setup:
-	@command -v bash >/dev/null || (echo "Error: bash not found"; exit 1)
-	@command -v grep >/dev/null || (echo "Error: grep not found"; exit 1)
-	@command -v awk >/dev/null || (echo "Error: awk not found"; exit 1)
-	@command -v sed >/dev/null || (echo "Error: sed not found"; exit 1)
-	@command -v tr >/dev/null || (echo "Error: tr not found"; exit 1)
-	@echo "All required tools are available."
-
+	@./scripts/setup_env.sh
 all:
 	@mkdir -p output
 	@echo "Analyzing all test logs..."
