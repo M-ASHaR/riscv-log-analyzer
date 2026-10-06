@@ -125,6 +125,12 @@ write_output(){
 check_file "$log_file"
 write_output
 
+if [[ "$verbose" == true ]]; then
+    echo "Verbose mode enabled."
+    echo "Analyzing log file: $log_file"
+    echo
+fi
+
 #counting the test results and rates of pass, fail and skip
 #grep is returning 1 when no match is found so || true is preventing set -e from stoping the execution
 passed=$(grep -c "TEST PASS" "$log_file" || true)
