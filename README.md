@@ -1,3 +1,4 @@
+git switch feature/documentation - MEDS Lab
 # RISC-V Simulation Log Analyzer
 
 A Bash-based tool that reads RISC-V simulation log files and shows a summary of the test results.
