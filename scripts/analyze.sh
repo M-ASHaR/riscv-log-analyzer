@@ -1,5 +1,10 @@
 #!/bin/bash
 set -euo pipefail
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
 
 # for arg in "$@"; do
 #     if [[ "$arg" == "--format" ]]; then
@@ -185,15 +190,14 @@ if [[ "$format" == "text" ]]; then
 
     echo "Total tests: $total"
     echo
-    echo "Passed: $passed (${pass_rate}%)"
-    echo "Failed: $failed (${fail_rate}%)"
-    echo "Skipped: $skipped (${skip_rate}%)"
-
+    echo -e "${GREEN}Passed: $passed (${pass_rate}%)${NC}"
+    echo -e "${RED}Failed: $failed (${fail_rate}%)${NC}"
+    echo -e "${YELLOW}Skipped: $skipped (${skip_rate}%)${NC}"
     echo
     echo "--- Failed Tests ---"
     echo
 
-    echo "$failed_tests"
+    echo -e "${RED}${failed_tests}${NC}"
 
     echo
     echo "--- Execution Times ---"
@@ -210,10 +214,10 @@ if [[ "$format" == "text" ]]; then
     echo
 
     if [[ $failed -eq 0 ]]; then
-        echo "--- Verdict: PASS ---"
-    else
-        echo "--- Verdict: FAIL ---"
-    fi
+    echo -e "${GREEN}--- Verdict: PASS ---${NC}"
+else
+    echo -e "${RED}--- Verdict: FAIL ---${NC}"
+fi
 
 elif [[ "$format" == "csv" ]]; then
 
@@ -271,11 +275,10 @@ elif [[ "$format" == "csv" ]]; then
 
     echo
     if [[ $failed -eq 0 ]]; then
-        echo "Verdict,PASS"
-    else
-        echo "Verdict,FAIL"
-    fi
-
+    echo -e "${GREEN}--- Verdict: PASS ---${NC}"
+else
+    echo -e "${RED}--- Verdict: FAIL ---${NC}"
+fi
 else
     echo "Error: Invalid format: $format"
     echo "Valid formats are: text, csv"
